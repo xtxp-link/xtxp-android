@@ -19,17 +19,21 @@ without `@session`, which means `@main`.
 | `+` Merge | Merges with every remote now, both ways, online or offline. Shows how many local changes are waiting. | Releasing a paused queue is an ordinary merge; the host admits whole sessions (decision 19) |
 | `Remotes ›` | Lists the sessions this one trusts, as `{host}/{path}@{session}`, with when each last merged or why it failed. Add or remove one there. | Trust between sessions drives automatic merges (decision 16) |
 
-## Drawing and list
+## The drawing
 
-The top half is the drawing, rendered by the system WebView (so CSS in the
+Under the bar, the drawing fills the screen. It is rendered by the system WebView (so CSS in the
 SVG, such as the logo's custom properties, renders as in a browser). Touch an
 element to select it, and drag to move it: the drag is previewed in place and
 committed when the finger lifts, as a `translate(dx dy)` at the front of the
 element's `transform`, in its parent's user units. Orbit also writes the
 transforms of the logo's three moving parts, so on those the last writer wins.
 
-The bottom half lists the elements. Tap a row to select it on the drawing.
-Long-press an element and drag it to reorder or regroup it. Dropping on the top of a row puts it
+The ⋮ button in the top right opens other views of the document: **View
+source** (its XML in canonical form, selectable) and **Elements** (a list
+where a tap selects an element and a long-press drag reorders or regroups
+it). Back returns to the drawing.
+
+In Elements, long-press an element and drag it. Dropping on the top of a row puts it
 before that row, on the bottom after it, and on the middle inside it as the
 last child. A move is a delete plus a copy (decision 20), so an edit someone
 makes to the element during your move lands on the original.

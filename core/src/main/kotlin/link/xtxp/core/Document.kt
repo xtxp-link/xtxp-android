@@ -23,6 +23,8 @@ data class DocState(
     val empty: Boolean = true,
     /** The drawing, each element marked with `data-xtxp-node="client:clock"`. */
     val svg: String = "",
+    /** The document itself, in canonical form: what View source shows. */
+    val source: String = "",
     val revision: ULong = 0u,
 )
 
@@ -42,6 +44,7 @@ class Document(dir: String, private val io: CoroutineDispatcher = Dispatchers.IO
         offline = muppet.isPaused(),
         empty = muppet.isEmpty(),
         svg = muppet.svg(),
+        source = muppet.canonical(),
         revision = muppet.revision(),
     )
 
