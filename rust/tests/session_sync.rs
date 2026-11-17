@@ -170,7 +170,7 @@ fn the_session_survives_a_restart() {
     assert_eq!(
         remotes,
         [
-            "xtxp-worker.campey.workers.dev/demo@main",
+            "xtxp-worker.campey.workers.dev/xtxp-logo@main",
             "http://localhost:8787/demo@main"
         ]
     );
@@ -274,14 +274,14 @@ fn syncs_over_a_real_websocket() {
 
     let address = format!("http://127.0.0.1:{port}/demo@main");
     let (_d1, a) = phone();
-    a.remove_remote("xtxp-worker.campey.workers.dev/demo@main".into())
+    a.remove_remote("xtxp-worker.campey.workers.dev/xtxp-logo@main".into())
         .unwrap();
     a.add_remote(address.clone()).unwrap();
     let report = a.sync(false).unwrap();
     assert!(report.errors.is_empty(), "{report:?}");
 
     let (_d2, b) = phone();
-    b.remove_remote("xtxp-worker.campey.workers.dev/demo@main".into())
+    b.remove_remote("xtxp-worker.campey.workers.dev/xtxp-logo@main".into())
         .unwrap();
     b.add_remote(address).unwrap();
     let report = b.sync(false).unwrap();

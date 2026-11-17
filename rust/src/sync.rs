@@ -13,7 +13,9 @@ use xtxp_wire::{Event, Input, Output, Peer};
 use yrs::updates::encoder::Encode;
 
 /// How long one sync may take before it's given up and retried later.
-pub const DEADLINE: Duration = Duration::from_secs(20);
+/// Generous, because a document with a long history (xtxp-logo, moved by
+/// orbit) arrives as one large update on a phone network.
+pub const DEADLINE: Duration = Duration::from_secs(90);
 
 /// A connection carrying binary frames.
 pub trait Link {

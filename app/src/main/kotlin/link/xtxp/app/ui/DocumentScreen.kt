@@ -50,7 +50,7 @@ fun DocumentScreen(vm: DocumentViewModel = viewModel()) {
         Column(Modifier.padding(padding)) {
             if (state.offline) PendingPanel(state.pending)
             if (state.empty) {
-                EmptyDocument(onFetch = { vm.merge() }, onSample = { vm.startWithSample() })
+                EmptyDocument(onFetch = { vm.merge() })
             } else {
                 ElementTree(state.rows, onMove = { a, b, drop -> vm.move(a, b, drop) })
             }

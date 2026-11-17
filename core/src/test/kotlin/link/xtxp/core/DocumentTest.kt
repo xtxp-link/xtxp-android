@@ -18,7 +18,7 @@ class DocumentTest {
         val s = d.state.value
         assertTrue(s.empty)
         assertFalse(s.offline)
-        assertEquals(listOf("xtxp-worker.campey.workers.dev/demo@main"), s.remotes.map { it.address })
+        assertEquals(listOf("xtxp-worker.campey.workers.dev/xtxp-logo@main"), s.remotes.map { it.address })
     }
 
     @Test
@@ -59,7 +59,7 @@ class DocumentTest {
         assertTrue(d.addRemote("not an address").isFailure)
         assertTrue(d.addRemote("http://localhost:8787/demo@main").isSuccess)
         assertEquals(2, d.state.value.remotes.size)
-        d.removeRemote("xtxp-worker.campey.workers.dev/demo@main")
+        d.removeRemote("xtxp-worker.campey.workers.dev/xtxp-logo@main")
         assertEquals(listOf("localhost:8787"), d.state.value.remotes.map { it.host })
         assertNull(d.state.value.remotes.single().lastSyncMs)
     }

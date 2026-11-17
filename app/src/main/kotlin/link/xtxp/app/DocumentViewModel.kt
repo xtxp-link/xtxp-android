@@ -65,8 +65,4 @@ class DocumentViewModel(app: Application) : AndroidViewModel(app) {
     fun removeRemote(address: String) = viewModelScope.launch {
         doc.removeRemote(address).onFailure { _messages.emit(it.reason) }
     }
-
-    fun startWithSample() = viewModelScope.launch {
-        doc.startWithSample().onFailure { _messages.emit(it.reason) }
-    }
 }

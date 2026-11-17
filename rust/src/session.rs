@@ -12,7 +12,7 @@ use xmesh::{NodeId, Xmesh};
 use yrs::updates::encoder::Encode;
 
 /// The host this app syncs with out of the box: the Cloudflare Worker.
-pub const DEFAULT_REMOTE: &str = "xtxp-worker.campey.workers.dev/demo@main";
+pub const DEFAULT_REMOTE: &str = "xtxp-worker.campey.workers.dev/xtxp-logo@main";
 
 /// One local edit not yet merged into a remote.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

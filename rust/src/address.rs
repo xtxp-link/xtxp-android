@@ -1,4 +1,8 @@
 //! Session addresses, `{host}/{path}@{ref}` (decisions 9 and 16).
+//!
+//! Also accepted, as people paste them: the worker's browser URL
+//! (`https://{host}/d/{doc}/`), and any address without `@{session}`, which
+//! means `@main`.
 
 use crate::XtxpError;
 use std::fmt;
@@ -17,8 +21,10 @@ pub struct Address {
 
 impl Address {
     pub fn parse(text: &str) -> Result<Address, XtxpError> {
-        let bad = |why: &str| XtxpError::Invalid {
-            msg: format!("{text:?} isn't a session address ({{host}}/{{path}}@{{session}}): {why}"),
+        let bad = |why: &str| {
+            XtxpError::Invalid {
+            msg: format!("{text:?} isn't a session address, like host/doc@main or https://host/d/doc/: {why}"),
+        }
         };
         let text = text.trim();
         let (tls, rest) = if let Some(r) = text.strip_prefix("http://") {
@@ -26,8 +32,11 @@ impl Address {
         } else {
             (true, text.strip_prefix("https://").unwrap_or(text))
         };
-        let (place, session) = rest.rsplit_once('@').ok_or_else(|| bad("no @session"))?;
-        let (host, path) = place.split_once('/').ok_or_else(|| bad("no /path"))?;
+        let (place, session) = rest.rsplit_once('@').unwrap_or((rest, "main"));
+        let (host, path) = place.split_once('/').ok_or_else(|| bad("no document"))?;
+        // The worker serves a document's page at /d/{doc}/.
+        let path = path.trim_end_matches('/');
+        let path = path.strip_prefix("d/").unwrap_or(path);
         if host.is_empty() || host.contains(char::is_whitespace) {
             return Err(bad("no host"));
         }
@@ -37,7 +46,7 @@ impl Address {
                     .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
         };
         if !name_ok(path) {
-            return Err(bad("the path must be letters, digits, - and _"));
+            return Err(bad("the document name must be letters, digits, - and _"));
         }
         if !name_ok(session) {
             return Err(bad("the session must be letters, digits, - and _"));
@@ -93,12 +102,33 @@ mod tests {
     }
 
     #[test]
+    fn takes_the_workers_browser_url_and_defaults_to_main() {
+        for text in [
+            "https://xtxp-worker.campey.workers.dev/d/xtxp-logo/",
+            "https://xtxp-worker.campey.workers.dev/d/xtxp-logo",
+            "xtxp-worker.campey.workers.dev/xtxp-logo",
+            " xtxp-worker.campey.workers.dev/d/xtxp-logo/@main ",
+        ] {
+            let a = Address::parse(text).unwrap();
+            assert_eq!(
+                a.to_string(),
+                "xtxp-worker.campey.workers.dev/xtxp-logo@main",
+                "{text}"
+            );
+            assert_eq!(
+                a.ws_url(),
+                "wss://xtxp-worker.campey.workers.dev/d/xtxp-logo/ws/xtxp-logo"
+            );
+        }
+    }
+
+    #[test]
     fn rejects_incomplete_addresses() {
         for bad in [
             "",
             "host",
-            "host/doc",
             "host@main",
+            "host/a/b@main",
             "/doc@main",
             "h/a b@main",
             "h/doc@",

@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit
 
 /** The one document this first version edits, stored in the app's files. */
 object Documents {
-    const val NAME = "demo"
+    const val NAME = "xtxp-logo"
     @Volatile private var doc: Document? = null
 
     fun get(context: Context): Document = doc ?: synchronized(this) {

@@ -6,7 +6,10 @@ of a shared XML document (an SVG drawing, first), local first.
 The phone keeps its own session of the document (decision 17), stored on the
 device, so everything works with no network. WorkManager merges it with the
 remote sessions it trusts, both ways, by Yjs sync with a y-sweet-compatible
-host such as the [xtxp-worker](https://xtxp-worker.campey.workers.dev).
+host such as the [xtxp-worker](https://xtxp-worker.campey.workers.dev). Out of the box
+it edits `xtxp-logo`, the document at https://xtxp-worker.campey.workers.dev/d/xtxp-logo/.
+A remote can be added as `host/doc@session`, as the worker's page URL, or
+without `@session`, which means `@main`.
 
 ## The `< + >` bar
 
@@ -47,7 +50,7 @@ the SDK's `ndk/` folder. CI builds a debug APK on every push and attaches it to
 the run.
 
 To try it against a local worker (`scripts/try-worker.sh` in xtxp-rs), add the
-remote `http://10.0.2.2:8787/demo@main` from the emulator.
+remote `http://10.0.2.2:8787/xtxp-logo@main` from the emulator.
 
 ## Not yet
 
@@ -59,4 +62,4 @@ remote `http://10.0.2.2:8787/demo@main` from the emulator.
 - **Admission.** y-sweet and the worker accept every connection, so a merge
   is never refused (decision 25 lists this gap).
 - **Auto-scroll while dragging**, and editing anything other than position.
-- **One document**, `demo`. Only `@main` exists on today's hosts.
+- **One document**, `xtxp-logo`. Only `@main` exists on today's hosts.

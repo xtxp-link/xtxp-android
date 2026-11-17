@@ -19,7 +19,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -134,9 +133,12 @@ fun RemotesSheet(
     }
 }
 
-/** A document with nothing in it yet: fetch it, or start offline. */
+/**
+ * A document with nothing in it yet: fetch it. There's no offline start,
+ * because a drawing made here would be a second root next to the shared one.
+ */
 @Composable
-fun EmptyDocument(onFetch: () -> Unit, onSample: () -> Unit, modifier: Modifier = Modifier) {
+fun EmptyDocument(onFetch: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier.fillMaxSize().padding(32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
@@ -144,6 +146,5 @@ fun EmptyDocument(onFetch: () -> Unit, onSample: () -> Unit, modifier: Modifier 
     ) {
         Text("Nothing here yet.", style = MaterialTheme.typography.titleMedium)
         Button(onClick = onFetch) { Text("Fetch from remotes") }
-        OutlinedButton(onClick = onSample) { Text("Start offline with a sample drawing") }
     }
 }
