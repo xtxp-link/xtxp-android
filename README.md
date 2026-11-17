@@ -30,13 +30,8 @@ transforms of the logo's three moving parts, so on those the last writer wins.
 
 The ⋮ button in the top right opens other views of the document: **View
 source** (its XML in canonical form, selectable) and **Elements** (a list
-where a tap selects an element and a long-press drag reorders or regroups
-it). Back returns to the drawing.
-
-In Elements, long-press an element and drag it. Dropping on the top of a row puts it
-before that row, on the bottom after it, and on the middle inside it as the
-last child. A move is a delete plus a copy (decision 20), so an edit someone
-makes to the element during your move lands on the original.
+of the elements; tap one to edit its attributes and text, saved as one
+edit). Back returns to the drawing.
 
 ## Layout
 
@@ -75,5 +70,6 @@ remote `http://10.0.2.2:8787/xtxp-logo@main` from the emulator.
   spec's diagram aren't settable yet.
 - **Admission.** y-sweet and the worker accept every connection, so a merge
   is never refused (decision 25 lists this gap).
-- **Auto-scroll while dragging**, and editing anything other than position.
+- **Adding, deleting or reordering elements.** The muppet can reorder
+  (a move is a delete plus a copy, decision 20), but the app doesn't offer it.
 - **One document**, `xtxp-logo`. Only `@main` exists on today's hosts.

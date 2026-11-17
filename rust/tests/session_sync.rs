@@ -344,3 +344,59 @@ fn dragging_on_the_drawing_sets_a_translate_and_merges() {
     sync(&b, &host, false);
     assert_eq!(a.canonical(), b.canonical());
 }
+
+#[test]
+fn the_element_editor_sets_removes_and_retexts_in_one_change() {
+    let host = Rc::new(RefCell::new(FakeHost::new()));
+    let (_d1, a) = phone();
+    let (_d2, b) = phone();
+    sync(&a, &host, false);
+    sync(&b, &host, false);
+
+    let sky = row(&a.rows(), "Sky").clone();
+    let label = sky
+        .attrs
+        .iter()
+        .find(|x| x.display == "inkscape:label")
+        .unwrap();
+    assert_eq!(
+        label.name,
+        "{http://www.inkscape.org/namespaces/inkscape}label"
+    );
+    assert_eq!(sky.editable_text, None);
+
+    let title = row(&a.rows(), "#title").clone();
+    assert_eq!(title.editable_text.as_deref(), Some("xtxp"));
+    let attr = |name: &str, value: &str| xtxp_mobile::Attr {
+        name: name.into(),
+        display: name.into(),
+        value: value.into(),
+    };
+    a.edit_element(
+        title.client,
+        title.clock,
+        vec![attr("fill", "#ff5436"), attr("inkscape:label", "Title")],
+        vec!["text-anchor".into()],
+        Some("xtxp ✓".into()),
+    )
+    .unwrap();
+    let c = a.canonical();
+    assert!(c.contains(r##"fill="#ff5436""##), "{c}");
+    assert!(c.contains(r#"inkscape:label="Title""#), "{c}");
+    assert!(!c.contains("text-anchor"), "{c}");
+    assert!(c.contains(">xtxp ✓</text>"), "{c}");
+    assert_eq!(
+        a.pending()
+            .iter()
+            .map(|p| p.summary.clone())
+            .collect::<Vec<_>>(),
+        ["Edited <text #title>: -text-anchor, fill, inkscape:label, text"]
+    );
+    assert!(a
+        .edit_element(sky.client, sky.clock, vec![], vec![], Some("no".into()))
+        .is_err());
+
+    sync(&a, &host, false);
+    sync(&b, &host, false);
+    assert_eq!(a.canonical(), b.canonical());
+}

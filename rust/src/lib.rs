@@ -19,7 +19,7 @@ use std::sync::{Arc, Mutex, OnceLock, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
 use xmesh::{NodeId, Xmesh};
 
-pub use tree::{Drop, Row};
+pub use tree::{Attr, Drop, Row};
 
 /// Opens a connection to a remote; tests pass an in-process host.
 pub type Connect<'a> = dyn FnMut(&Address) -> Result<Box<dyn sync::Link>, XtxpError> + 'a;
@@ -145,6 +145,27 @@ impl Muppet {
             .lock()
             .unwrap()
             .translate(node(client, clock), dx, dy, now_ms())
+    }
+
+    /// Saves the element editor: sets the `set` attributes (by name as in
+    /// [`Attr::name`], or typed as `fill` or `inkscape:label`), removes the
+    /// `remove` ones, and replaces the text if `text` is given.
+    pub fn edit_element(
+        &self,
+        client: u64,
+        clock: u32,
+        set: Vec<Attr>,
+        remove: Vec<String>,
+        text: Option<String>,
+    ) -> Result<(), XtxpError> {
+        let set: Vec<(String, String)> = set.into_iter().map(|a| (a.name, a.value)).collect();
+        self.session.lock().unwrap().edit(
+            node(client, clock),
+            &set,
+            &remove,
+            text.as_deref(),
+            now_ms(),
+        )
     }
 
     pub fn canonical(&self) -> String {

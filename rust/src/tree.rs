@@ -19,6 +19,31 @@ pub struct Row {
     /// The element's own text, trimmed and shortened.
     pub text: String,
     pub child_elements: u32,
+    /// Every attribute, for the editor, in canonical order.
+    pub attrs: Vec<Attr>,
+    /// The whole text, when the element has exactly one text child and
+    /// so its text can be edited; `None` otherwise.
+    pub editable_text: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct Attr {
+    /// As Xmesh stores it: `{uri}local` or `local`. Pass it back to edit.
+    pub name: String,
+    /// As a person reads it: `fill`, `inkscape:label`.
+    pub display: String,
+    pub value: String,
+}
+
+fn display_name(expanded: &str) -> String {
+    let (uri, local) = split(expanded);
+    match uri {
+        None => local.to_string(),
+        Some(uri) => match xmesh::names::FIXED_PREFIXES.iter().find(|(_, u)| *u == uri) {
+            Some((prefix, _)) => format!("{prefix}:{local}"),
+            None => expanded.to_string(),
+        },
+    }
 }
 
 /// Where a dragged row lands relative to the row it's dropped on.
@@ -76,6 +101,18 @@ fn push_rows(node: &IdNode, depth: u32, out: &mut Vec<Row>) {
         label: label(attrs),
         text: shorten(&text, 40),
         child_elements: elements,
+        attrs: attrs
+            .iter()
+            .map(|(k, v)| Attr {
+                name: k.clone(),
+                display: display_name(k),
+                value: v.clone(),
+            })
+            .collect(),
+        editable_text: match texts(children).as_slice() {
+            [(_, t)] => Some(t.clone()),
+            _ => None,
+        },
     });
     for child in children {
         push_rows(child, depth + 1, out);
@@ -312,6 +349,106 @@ pub fn translate_op(
         },
         summary,
     ))
+}
+
+/// The element's text children: their index among its children, and text.
+fn texts(children: &[IdNode]) -> Vec<(u32, String)> {
+    children
+        .iter()
+        .enumerate()
+        .filter_map(|(i, c)| match &c.node {
+            IdNodeKind::Text(t) => Some((i as u32, t.clone())),
+            _ => None,
+        })
+        .collect()
+}
+
+/// One edit from the element editor: attributes to set and remove, and new
+/// text if it changed, as one transaction.
+pub fn edit_ops(
+    fragment: &[IdNode],
+    node: NodeId,
+    set: &[(String, String)],
+    remove: &[String],
+    text: Option<&str>,
+) -> Result<(Vec<Op>, String), XtxpError> {
+    let invalid = |msg: &str| XtxpError::Invalid { msg: msg.into() };
+    let root = root(fragment).ok_or_else(|| invalid("the document is empty"))?;
+    let (path, n) = locate(root, node).ok_or_else(|| invalid("that element is gone"))?;
+    let IdNodeKind::Element { children, .. } = &n.node else {
+        return Err(invalid("only elements have attributes"));
+    };
+    let mut ops = Vec::new();
+    let mut what = Vec::new();
+    for name in remove {
+        ops.push(Op::RemoveAttr {
+            path: path.clone(),
+            name: name.clone(),
+        });
+        what.push(format!("-{}", display_name(name)));
+    }
+    for (name, value) in set {
+        if name.trim().is_empty() {
+            return Err(invalid("an attribute needs a name"));
+        }
+        ops.push(Op::SetAttr {
+            path: path.clone(),
+            name: name.trim().to_string(),
+            value: value.clone(),
+        });
+        what.push(display_name(name.trim()));
+    }
+    if let Some(new) = text {
+        let runs = texts(children);
+        let [(index, old)] = runs.as_slice() else {
+            return Err(invalid(
+                "only an element with one run of text can have it edited",
+            ));
+        };
+        if old != new {
+            let mut text_path = path.clone();
+            text_path.push(*index);
+            ops.extend(text_ops(text_path, old, new));
+            what.push("text".into());
+        }
+    }
+    Ok((ops, format!("Edited {}: {}", describe(n), what.join(", "))))
+}
+
+/// The ops that turn `old` text into `new`: at most one delete and one
+/// insert, around their common prefix and suffix, at UTF-16 offsets (as the
+/// muppet's own editors do).
+fn text_ops(path: Vec<u32>, old: &str, new: &str) -> Vec<Op> {
+    let (o, n): (Vec<char>, Vec<char>) = (old.chars().collect(), new.chars().collect());
+    let prefix = o.iter().zip(&n).take_while(|(a, b)| a == b).count();
+    let max_suffix = o.len().min(n.len()) - prefix;
+    let suffix = o
+        .iter()
+        .rev()
+        .zip(n.iter().rev())
+        .take(max_suffix)
+        .take_while(|(a, b)| a == b)
+        .count();
+    let units = |cs: &[char]| cs.iter().map(|c| c.len_utf16() as u32).sum::<u32>();
+    let offset = units(&o[..prefix]);
+    let removed = &o[prefix..o.len() - suffix];
+    let added: String = n[prefix..n.len() - suffix].iter().collect();
+    let mut ops = Vec::new();
+    if !removed.is_empty() {
+        ops.push(Op::DeleteText {
+            path: path.clone(),
+            offset,
+            len: units(removed),
+        });
+    }
+    if !added.is_empty() {
+        ops.push(Op::InsertText {
+            path,
+            offset,
+            text: added,
+        });
+    }
+    ops
 }
 
 #[cfg(test)]

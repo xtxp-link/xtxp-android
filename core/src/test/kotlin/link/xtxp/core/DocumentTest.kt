@@ -75,4 +75,16 @@ class DocumentTest {
         assertEquals("Dragged <circle #sun> by (4, -2)", d.state.value.pending.single().summary)
         assertTrue(d.translate("nonsense", 1.0, 1.0).isFailure)
     }
+
+    @Test
+    fun theEditorSavesAttributesAndText() = runTest {
+        val d = Document(Files.createTempDirectory("xtxp").toString(), StandardTestDispatcher(testScheduler))
+        d.startWithSample()
+        val title = d.state.value.rows.first { it.label == "#title" }
+        assertEquals("xtxp", title.editableText)
+        val fill = uniffi.xtxp_mobile.Attr(name = "fill", display = "fill", value = "red")
+        assertTrue(d.editElement(title, listOf(fill), listOf("x"), "hello").isSuccess)
+        val c = d.canonical()
+        assertTrue(c.contains("fill=\"red\"") && !c.contains(" x=\"60\"") && c.contains(">hello</text>"), c)
+    }
 }

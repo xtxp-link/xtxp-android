@@ -144,6 +144,28 @@ impl Session {
         self.save()
     }
 
+    /// The element editor's changes, as one transaction and one pending change.
+    pub fn edit(
+        &mut self,
+        node: NodeId,
+        set: &[(String, String)],
+        remove: &[String],
+        text: Option<&str>,
+        now_ms: i64,
+    ) -> Result<(), XtxpError> {
+        let tree = self.doc.tree_with_ids();
+        let (ops, summary) = tree::edit_ops(&tree, node, set, remove, text)?;
+        if ops.is_empty() {
+            return Ok(());
+        }
+        self.doc.edit(&ops).map_err(invalid)?;
+        self.meta.pending.push(Change {
+            summary,
+            at_ms: now_ms,
+        });
+        self.save()
+    }
+
     /// The drawing, with each element marked so a touch finds its node.
     pub fn marked_svg(&self) -> String {
         xmesh::canonical(&tree::marked(&self.doc.tree_with_ids()))

@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import uniffi.xtxp_mobile.Attr
 import uniffi.xtxp_mobile.Drop
 import uniffi.xtxp_mobile.Muppet
 import uniffi.xtxp_mobile.PendingChange
@@ -68,6 +69,10 @@ class Document(dir: String, private val io: CoroutineDispatcher = Dispatchers.IO
         val (client, clock) = parseKey(key) ?: throw XtxpException.Invalid("not a node: $key")
         muppet.translate(client, clock, dx, dy)
     }
+
+    /** The element editor's Save: set and remove attributes, and replace the text. */
+    suspend fun editElement(row: Row, set: List<Attr>, remove: List<String>, text: String?) =
+        act { muppet.editElement(row.client, row.clock, set, remove, text) }
 
     suspend fun setOffline(offline: Boolean) = act { muppet.setPaused(offline) }
 

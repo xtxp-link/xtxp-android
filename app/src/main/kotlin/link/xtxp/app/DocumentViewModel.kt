@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import link.xtxp.core.DocState
 import link.xtxp.core.reason
-import uniffi.xtxp_mobile.Drop
+import uniffi.xtxp_mobile.Attr
 import uniffi.xtxp_mobile.Row
 
 class DocumentViewModel(app: Application) : AndroidViewModel(app) {
@@ -62,10 +62,16 @@ class DocumentViewModel(app: Application) : AndroidViewModel(app) {
         schedule.mergeNow()
     }
 
-    fun move(dragged: Row, target: Row, drop: Drop) = viewModelScope.launch {
-        doc.move(dragged, target, drop)
+    /** The element editor's Save. */
+    fun editElement(row: Row, set: List<Attr>, remove: List<String>, text: String?) = viewModelScope.launch {
+        doc.editElement(row, set, remove, text)
             .onSuccess { if (!state.value.offline) schedule.soon() }
             .onFailure { _messages.emit(it.reason) }
+    }
+
+    /** Shows a message from the drawing in the snackbar. */
+    fun say(message: String) {
+        _messages.tryEmit(message)
     }
 
     /** A drag on the drawing, in the element's parent's user units. */

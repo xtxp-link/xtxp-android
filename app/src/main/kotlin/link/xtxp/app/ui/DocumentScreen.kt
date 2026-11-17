@@ -52,6 +52,7 @@ fun DocumentScreen(vm: DocumentViewModel = viewModel()) {
     val syncing by vm.syncing.collectAsStateWithLifecycle()
     val selected by vm.selected.collectAsStateWithLifecycle()
     var showRemotes by remember { mutableStateOf(false) }
+    var editing by rememberSaveable { mutableStateOf<String?>(null) }
     var view by rememberSaveable { mutableStateOf(View.DRAWING) }
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(vm) { vm.messages.collect { snackbar.showSnackbar(it) } }
@@ -86,6 +87,7 @@ fun DocumentScreen(vm: DocumentViewModel = viewModel()) {
                         selected = selected,
                         onSelect = { vm.select(it) },
                         onMoved = { key, dx, dy -> vm.translate(key, dx, dy) },
+                        onError = { vm.say(it) },
                         modifier = Modifier.fillMaxSize(),
                     )
                     view == View.SOURCE -> Source(state.source, onClose = { view = View.DRAWING })
@@ -94,8 +96,7 @@ fun DocumentScreen(vm: DocumentViewModel = viewModel()) {
                         ElementTree(
                             state.rows,
                             selected = selected,
-                            onSelect = { vm.select(it.key) },
-                            onMove = { a, b, drop -> vm.move(a, b, drop) },
+                            onEdit = { vm.select(it.key); editing = it.key },
                         )
                     }
                 }
@@ -108,6 +109,13 @@ fun DocumentScreen(vm: DocumentViewModel = viewModel()) {
                 }
             }
         }
+    }
+    state.rows.firstOrNull { it.key == editing }?.let { row ->
+        ElementEditor(
+            row,
+            onSave = { set, remove, text -> vm.editElement(row, set, remove, text); editing = null },
+            onDismiss = { editing = null },
+        )
     }
     if (showRemotes) {
         RemotesSheet(
