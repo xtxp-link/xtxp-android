@@ -36,9 +36,8 @@ jobs:
       - name: Kotlin tests (bindings and bar/drop logic, on the JVM)
         run: ./gradlew -p core test
 
+      # cargo-ndk finds the runner's NDK through ANDROID_NDK_ROOT.
       - name: Build the APK
-        env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
         run: ./gradlew :app:assembleDebug
 
       - uses: actions/upload-artifact@v4
