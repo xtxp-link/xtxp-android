@@ -126,6 +126,29 @@ impl Session {
         self.save()
     }
 
+    /// Drags `node` by `(dx, dy)` in its parent's user units.
+    pub fn translate(
+        &mut self,
+        node: NodeId,
+        dx: f64,
+        dy: f64,
+        now_ms: i64,
+    ) -> Result<(), XtxpError> {
+        let tree = self.doc.tree_with_ids();
+        let (op, summary) = tree::translate_op(&tree, node, dx, dy)?;
+        self.doc.edit(&[op]).map_err(invalid)?;
+        self.meta.pending.push(Change {
+            summary,
+            at_ms: now_ms,
+        });
+        self.save()
+    }
+
+    /// The drawing, with each element marked so a touch finds its node.
+    pub fn marked_svg(&self) -> String {
+        xmesh::canonical(&tree::marked(&self.doc.tree_with_ids()))
+    }
+
     /// Merges a state that came back from a remote, and drops the first
     /// `merged` pending changes: those were in the state that was sent.
     pub fn merge_remote(

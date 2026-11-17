@@ -312,3 +312,35 @@ fn offline_first_run_merges_with_a_host_seeded_the_same_way() {
         "a synced document can't restart"
     );
 }
+
+#[test]
+fn dragging_on_the_drawing_sets_a_translate_and_merges() {
+    let host = Rc::new(RefCell::new(FakeHost::new()));
+    let (_d1, a) = phone();
+    let (_d2, b) = phone();
+    sync(&a, &host, false);
+    sync(&b, &host, false);
+
+    let sun = row(&a.rows(), "#sun").clone();
+    let key = format!(r#"data-xtxp-node="{}:{}""#, sun.client, sun.clock);
+    assert!(a.svg().contains(&key), "{}", a.svg());
+    assert!(
+        !a.canonical().contains("data-xtxp-node"),
+        "marks stay out of the document"
+    );
+
+    a.translate(sun.client, sun.clock, -10.0, 4.5).unwrap();
+    a.translate(sun.client, sun.clock, 2.0, 0.5).unwrap();
+    assert!(
+        a.canonical().contains(r#"transform="translate(-8 5)""#),
+        "{}",
+        a.canonical()
+    );
+    assert_eq!(a.pending()[0].summary, "Dragged <circle #sun> by (-10, 5)");
+    // A translate keeps the node, so the row is the same one.
+    assert_eq!(row(&a.rows(), "#sun").clock, sun.clock);
+
+    sync(&a, &host, false);
+    sync(&b, &host, false);
+    assert_eq!(a.canonical(), b.canonical());
+}

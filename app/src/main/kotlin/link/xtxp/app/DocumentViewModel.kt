@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +30,14 @@ class DocumentViewModel(app: Application) : AndroidViewModel(app) {
         combine(SyncSchedule.ALL.map { work.getWorkInfosForUniqueWorkFlow(it) }) { all ->
             all.any { infos -> infos.any { it.state == WorkInfo.State.RUNNING } }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    }
+
+    private val _selected = MutableStateFlow<String?>(null)
+    /** The element picked on the drawing or in the list, as `client:clock`. */
+    val selected: StateFlow<String?> = _selected.asStateFlow()
+
+    fun select(key: String?) {
+        _selected.value = key
     }
 
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
@@ -54,6 +64,13 @@ class DocumentViewModel(app: Application) : AndroidViewModel(app) {
 
     fun move(dragged: Row, target: Row, drop: Drop) = viewModelScope.launch {
         doc.move(dragged, target, drop)
+            .onSuccess { if (!state.value.offline) schedule.soon() }
+            .onFailure { _messages.emit(it.reason) }
+    }
+
+    /** A drag on the drawing, in the element's parent's user units. */
+    fun translate(key: String, dx: Double, dy: Double) = viewModelScope.launch {
+        doc.translate(key, dx, dy)
             .onSuccess { if (!state.value.offline) schedule.soon() }
             .onFailure { _messages.emit(it.reason) }
     }

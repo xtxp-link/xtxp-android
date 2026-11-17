@@ -2,6 +2,8 @@ package link.xtxp.app.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -19,11 +21,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import link.xtxp.app.DocumentViewModel
 import link.xtxp.core.SplitBar
+import link.xtxp.core.key
 
 @Composable
 fun DocumentScreen(vm: DocumentViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val syncing by vm.syncing.collectAsStateWithLifecycle()
+    val selected by vm.selected.collectAsStateWithLifecycle()
     var showRemotes by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(vm) { vm.messages.collect { snackbar.showSnackbar(it) } }
@@ -52,7 +56,21 @@ fun DocumentScreen(vm: DocumentViewModel = viewModel()) {
             if (state.empty) {
                 EmptyDocument(onFetch = { vm.merge() })
             } else {
-                ElementTree(state.rows, onMove = { a, b, drop -> vm.move(a, b, drop) })
+                Drawing(
+                    svg = state.svg,
+                    selected = selected,
+                    onSelect = { vm.select(it) },
+                    onMoved = { key, dx, dy -> vm.translate(key, dx, dy) },
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                )
+                HorizontalDivider()
+                ElementTree(
+                    state.rows,
+                    selected = selected,
+                    onSelect = { vm.select(it.key) },
+                    onMove = { a, b, drop -> vm.move(a, b, drop) },
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
     }

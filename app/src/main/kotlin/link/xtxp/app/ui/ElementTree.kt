@@ -2,6 +2,7 @@ package link.xtxp.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +38,7 @@ import androidx.compose.ui.zIndex
 import link.xtxp.core.Hit
 import link.xtxp.core.RowSlot
 import link.xtxp.core.hitTest
+import link.xtxp.core.key
 import uniffi.xtxp_mobile.Drop
 import uniffi.xtxp_mobile.Row as ElementRow
 
@@ -48,6 +50,8 @@ import uniffi.xtxp_mobile.Row as ElementRow
 @Composable
 fun ElementTree(
     rows: List<ElementRow>,
+    selected: String?,
+    onSelect: (ElementRow) -> Unit,
     onMove: (dragged: ElementRow, target: ElementRow, drop: Drop) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -97,7 +101,9 @@ fun ElementTree(
             ElementRowView(
                 row = row,
                 drop = hit?.takeIf { it.index == index }?.drop,
+                selected = row.key == selected,
                 modifier = Modifier
+                    .clickable { onSelect(row) }
                     .zIndex(if (lifted) 1f else 0f)
                     .graphicsLayer { translationY = if (lifted) dragOffset else 0f }
                     .then(if (lifted) Modifier.shadow(8.dp) else Modifier),
@@ -107,14 +113,14 @@ fun ElementTree(
 }
 
 @Composable
-private fun ElementRowView(row: ElementRow, drop: Drop?, modifier: Modifier = Modifier) {
+private fun ElementRowView(row: ElementRow, drop: Drop?, selected: Boolean, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     val line = colors.primary
     Box(
         modifier
             .fillMaxWidth()
             .height(56.dp)
-            .background(colors.surface)
+            .background(if (selected) colors.secondaryContainer else colors.surface)
             .then(
                 when (drop) {
                     Drop.INTO -> Modifier

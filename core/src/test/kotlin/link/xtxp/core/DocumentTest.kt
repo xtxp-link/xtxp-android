@@ -63,4 +63,16 @@ class DocumentTest {
         assertEquals(listOf("localhost:8787"), d.state.value.remotes.map { it.host })
         assertNull(d.state.value.remotes.single().lastSyncMs)
     }
+
+    @Test
+    fun draggingOnTheDrawingTranslatesTheElement() = runTest {
+        val d = Document(Files.createTempDirectory("xtxp").toString(), StandardTestDispatcher(testScheduler))
+        d.startWithSample()
+        val sun = d.state.value.rows.first { it.label == "#sun" }
+        assertTrue(d.state.value.svg.contains("data-xtxp-node=\"${sun.key}\""))
+        assertTrue(d.translate(sun.key, 4.0, -1.5).isSuccess)
+        assertTrue(d.canonical().contains("transform=\"translate(4 -1.5)\""), d.canonical())
+        assertEquals("Dragged <circle #sun> by (4, -2)", d.state.value.pending.single().summary)
+        assertTrue(d.translate("nonsense", 1.0, 1.0).isFailure)
+    }
 }

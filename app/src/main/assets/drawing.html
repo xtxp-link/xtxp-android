@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; }
+  #c { position: absolute; inset: 8px; touch-action: none; user-select: none; -webkit-user-select: none; }
+  #c > svg { width: 100%; height: 100%; display: block; }
+  .xtxp-sel { filter: drop-shadow(0 0 1px #ff2bd6) drop-shadow(0 0 2px #ff2bd6); }
+</style>
+</head>
+<body>
+<div id="c"></div>
+<script>
+  // The drawing as the muppet renders it. Every element carries
+  // data-xtxp-node="client:clock", so a touch finds its node; a drag
+  // previews a translate here and hands it to the app when the finger lifts.
+  const c = document.getElementById('c');
+  let selected = '';
+  let drag = null;
+  let queued = null;
+
+  function show(svg, sel) {
+    if (drag) { queued = [svg, sel]; return; }
+    c.innerHTML = svg;
+    selected = sel;
+    mark();
+  }
+
+  function mark() {
+    c.querySelectorAll('.xtxp-sel').forEach(e => e.classList.remove('xtxp-sel'));
+    if (!selected) return;
+    const e = c.querySelector('[data-xtxp-node="' + selected + '"]');
+    if (e && e.tagName.toLowerCase() !== 'svg') e.classList.add('xtxp-sel');
+  }
+
+  // The innermost marked element under the finger, never the root <svg>.
+  function hit(t) {
+    for (let e = t; e && e !== c; e = e.parentNode) {
+      if (e.tagName && e.tagName.toLowerCase() === 'svg') return null;
+      if (e.getAttribute && e.getAttribute('data-xtxp-node')) return e;
+    }
+    return null;
+  }
+
+  // A screen point in the user units of the element's parent, where a
+  // leading translate on the element applies.
+  function local(e, x, y) {
+    const m = e.parentNode.getScreenCTM();
+    return new DOMPoint(x, y).matrixTransform(m.inverse());
+  }
+
+  c.addEventListener('pointerdown', ev => {
+    const e = hit(ev.target);
+    if (!e) return;
+    selected = e.getAttribute('data-xtxp-node');
+    mark();
+    Xtxp.select(selected);
+    drag = { e, start: local(e, ev.clientX, ev.clientY), orig: e.getAttribute('transform') || '', dx: 0, dy: 0 };
+    c.setPointerCapture(ev.pointerId);
+    ev.preventDefault();
+  });
+
+  c.addEventListener('pointermove', ev => {
+    if (!drag) return;
+    const p = local(drag.e, ev.clientX, ev.clientY);
+    drag.dx = p.x - drag.start.x;
+    drag.dy = p.y - drag.start.y;
+    drag.e.setAttribute('transform', ('translate(' + drag.dx + ' ' + drag.dy + ') ' + drag.orig).trim());
+  });
+
+  function end() {
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+    if (Math.abs(d.dx) + Math.abs(d.dy) > 0.05) {
+      Xtxp.moved(d.e.getAttribute('data-xtxp-node'), d.dx, d.dy);
+    } else if (d.orig) {
+      d.e.setAttribute('transform', d.orig);
+    } else {
+      d.e.removeAttribute('transform');
+    }
+    if (queued) { const [svg, sel] = queued; queued = null; show(svg, sel); }
+  }
+  c.addEventListener('pointerup', end);
+  c.addEventListener('pointercancel', end);
+</script>
+</body>
+</html>

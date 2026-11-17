@@ -132,6 +132,21 @@ impl Muppet {
         self.session.lock().unwrap().start_with(&seed)
     }
 
+    /// The drawing to render: the document with `data-xtxp-node="client:clock"`
+    /// on every element.
+    pub fn svg(&self) -> String {
+        self.session.lock().unwrap().marked_svg()
+    }
+
+    /// Drags an element by `(dx, dy)` in its parent's user units, as a
+    /// `translate` at the front of its `transform`.
+    pub fn translate(&self, client: u64, clock: u32, dx: f64, dy: f64) -> Result<(), XtxpError> {
+        self.session
+            .lock()
+            .unwrap()
+            .translate(node(client, clock), dx, dy, now_ms())
+    }
+
     pub fn canonical(&self) -> String {
         self.session.lock().unwrap().doc().canonical()
     }

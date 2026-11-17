@@ -200,3 +200,136 @@ pub fn move_op(
         summary,
     ))
 }
+
+/// The attribute the drawing marks each element with, `client:clock`, so a
+/// touch on the drawing finds its node. It's only in what's rendered, never
+/// in the document.
+pub const NODE_ATTR: &str = "data-xtxp-node";
+
+pub fn node_key(id: NodeId) -> String {
+    format!("{}:{}", id.client, id.clock)
+}
+
+/// The document as plain nodes, each element marked with [`NODE_ATTR`].
+pub fn marked(fragment: &[IdNode]) -> Vec<xmesh::Node> {
+    fragment.iter().map(mark).collect()
+}
+
+fn mark(n: &IdNode) -> xmesh::Node {
+    match &n.node {
+        IdNodeKind::Text(t) => xmesh::Node::Text(t.clone()),
+        IdNodeKind::Element {
+            name,
+            attrs,
+            children,
+        } => {
+            let mut attrs = attrs.clone();
+            if !is_reserved(name) {
+                attrs.push((NODE_ATTR.to_string(), node_key(n.id)));
+            }
+            xmesh::Node::Element(xmesh::Element {
+                name: name.clone(),
+                attrs,
+                children: children.iter().map(mark).collect(),
+            })
+        }
+    }
+}
+
+/// `transform` with `translate(dx dy)` applied first in the parent's space:
+/// added to a leading translate, or put in front of whatever is there.
+pub fn translated(transform: &str, dx: f64, dy: f64) -> String {
+    let t = transform.trim();
+    let num = |v: f64| {
+        let s = format!("{:.2}", v);
+        let s = s.trim_end_matches('0').trim_end_matches('.').to_string();
+        if s == "-0" {
+            "0".into()
+        } else {
+            s
+        }
+    };
+    if let Some(rest) = t.strip_prefix("translate(") {
+        if let Some((args, after)) = rest.split_once(')') {
+            let nums: Vec<f64> = args
+                .split(|c: char| c == ',' || c.is_whitespace())
+                .filter(|s| !s.is_empty())
+                .map(str::parse)
+                .collect::<Result<_, _>>()
+                .unwrap_or_default();
+            if matches!(nums.len(), 1 | 2) {
+                let (x, y) = (nums[0], nums.get(1).copied().unwrap_or(0.0));
+                let after = after.trim();
+                let head = format!("translate({} {})", num(x + dx), num(y + dy));
+                return if after.is_empty() {
+                    head
+                } else {
+                    format!("{head} {after}")
+                };
+            }
+        }
+    }
+    let head = format!("translate({} {})", num(dx), num(dy));
+    if t.is_empty() {
+        head
+    } else {
+        format!("{head} {t}")
+    }
+}
+
+/// The edit for dragging `node` by `(dx, dy)` in its parent's user units.
+pub fn translate_op(
+    fragment: &[IdNode],
+    node: NodeId,
+    dx: f64,
+    dy: f64,
+) -> Result<(Op, String), XtxpError> {
+    let invalid = |msg: &str| XtxpError::Invalid { msg: msg.into() };
+    let root = root(fragment).ok_or_else(|| invalid("the document is empty"))?;
+    let (path, n) = locate(root, node).ok_or_else(|| invalid("that element is gone"))?;
+    let IdNodeKind::Element { attrs, .. } = &n.node else {
+        return Err(invalid("only elements move"));
+    };
+    if path.is_empty() {
+        return Err(invalid("the root element can't move"));
+    }
+    let current = attrs
+        .iter()
+        .find(|(k, _)| k == "transform")
+        .map(|(_, v)| v.as_str())
+        .unwrap_or("");
+    let summary = format!(
+        "Dragged {} by ({}, {})",
+        describe(n),
+        dx.round(),
+        dy.round()
+    );
+    Ok((
+        Op::SetAttr {
+            path,
+            name: "transform".into(),
+            value: translated(current, dx, dy),
+        },
+        summary,
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::translated;
+
+    #[test]
+    fn translates_compose_with_what_is_there() {
+        assert_eq!(translated("", 3.0, -2.5), "translate(3 -2.5)");
+        assert_eq!(translated("translate(64 0)", 1.004, 2.0), "translate(65 2)");
+        assert_eq!(
+            translated("translate(32,0) rotate(45) scale(.606)", -2.0, 1.0),
+            "translate(30 1) rotate(45) scale(.606)"
+        );
+        assert_eq!(
+            translated("rotate(10)", 1.0, 1.0),
+            "translate(1 1) rotate(10)"
+        );
+        assert_eq!(translated("translate(5)", -5.0, 0.0), "translate(0 0)");
+    }
+}

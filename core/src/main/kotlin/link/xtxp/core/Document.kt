@@ -21,6 +21,8 @@ data class DocState(
     val remotes: List<Remote> = emptyList(),
     val offline: Boolean = false,
     val empty: Boolean = true,
+    /** The drawing, each element marked with `data-xtxp-node="client:clock"`. */
+    val svg: String = "",
     val revision: ULong = 0u,
 )
 
@@ -39,6 +41,7 @@ class Document(dir: String, private val io: CoroutineDispatcher = Dispatchers.IO
         remotes = muppet.remotes(),
         offline = muppet.isPaused(),
         empty = muppet.isEmpty(),
+        svg = muppet.svg(),
         revision = muppet.revision(),
     )
 
@@ -56,6 +59,12 @@ class Document(dir: String, private val io: CoroutineDispatcher = Dispatchers.IO
 
     suspend fun move(dragged: Row, target: Row, drop: Drop) =
         act { muppet.moveNode(dragged.client, dragged.clock, target.client, target.clock, drop) }
+
+    /** Drags the element marked [key] by `(dx, dy)` in its parent's user units. */
+    suspend fun translate(key: String, dx: Double, dy: Double) = act {
+        val (client, clock) = parseKey(key) ?: throw XtxpException.Invalid("not a node: $key")
+        muppet.translate(client, clock, dx, dy)
+    }
 
     suspend fun setOffline(offline: Boolean) = act { muppet.setPaused(offline) }
 
@@ -79,3 +88,11 @@ val Throwable.reason: String
         is XtxpException.Network -> msg
         else -> message ?: toString()
     }
+
+/** The key a row and the drawing share for one element: `client:clock`. */
+val Row.key: String get() = "$client:$clock"
+
+fun parseKey(key: String): Pair<ULong, UInt>? {
+    val (a, b) = key.split(':').takeIf { it.size == 2 } ?: return null
+    return (a.toULongOrNull() ?: return null) to (b.toUIntOrNull() ?: return null)
+}
